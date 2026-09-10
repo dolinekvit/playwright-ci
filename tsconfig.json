@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "allowUmdGlobalAccess": true,
+    "types": ["vite/client"],
+    "jsx": "react-jsx",
+    "module": "commonjs",
+    "target": "esnext",
+    "lib": ["dom"],
+    "rootDir": "./src"
+  },
+  "exclude": ["node_modules"]
+}
