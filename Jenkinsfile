@@ -34,11 +34,9 @@ pipeline {
             parallel {
                 stage('Unit tests') {
                     steps {
-                        // Run tests without aborting the stage, then let junit
-                        // grade the result and publish it to the named check.
                         sh 'npx vitest run || true'
                         withChecks('Unit tests') {
-                            junit testResults: 'test-results/unit-junit.xml', allowEmptyResults: false
+                            junit testResults: 'reports/unit-junit.xml', allowEmptyResults: false
                         }
                     }
                 }
@@ -46,7 +44,7 @@ pipeline {
                     steps {
                         sh 'npm run test:e2e || true'
                         withChecks('Smoke tests') {
-                            junit testResults: 'test-results/e2e-junit.xml', allowEmptyResults: false
+                            junit testResults: 'reports/e2e-junit.xml', allowEmptyResults: false
                         }
                     }
                 }
@@ -64,7 +62,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'playwright-report/**, test-results/**',
+            archiveArtifacts artifacts: 'playwright-report/**, reports/**, test-results/**',
                        allowEmptyArchive: true
         }
     }

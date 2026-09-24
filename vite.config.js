@@ -10,6 +10,7 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.spec.{ts,tsx}'],
     reporters: ['default', 'junit'],
-    outputFile: { junit: './test-results/unit-junit.xml' },
+    // reports/ is NOT Playwright's outputDir, so parallel e2e can't wipe it.
+    outputFile: { junit: './reports/unit-junit.xml' },
   }
 })
