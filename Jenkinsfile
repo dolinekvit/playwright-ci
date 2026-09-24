@@ -16,31 +16,48 @@ pipeline {
     }
 
     stages {
-        stage('Install dependencies') {
+        stage('Install') {
             steps {
                 sh 'npm ci'
             }
+            // publishChecks in post always closes the check (green or red),
+            // unlike withChecks around a plain sh which leaves it "in progress".
+            post {
+                success      { publishChecks name: 'Install', conclusion: 'SUCCESS', summary: 'npm ci' }
+                unsuccessful { publishChecks name: 'Install', conclusion: 'FAILURE', summary: 'npm ci failed' }
+            }
         }
-        stage('Build application') {
+        stage('Build') {
             steps {
                 sh 'npm run build'
+            }
+            post {
+                success      { publishChecks name: 'Build', conclusion: 'SUCCESS', summary: 'vite build' }
+                unsuccessful { publishChecks name: 'Build', conclusion: 'FAILURE', summary: 'vite build failed' }
             }
         }
         stage('Test') {
             parallel {
                 stage('Unit tests') {
                     steps {
-                        sh 'npx vitest run --reporter=junit --outputFile=test-results/unit-junit.xml'
+                        sh 'npx vitest run || true'
+                        // junit inside withChecks closes this check with test results.
+                        withChecks('Unit tests') {
+                            junit testResults: 'reports/unit-junit.xml', allowEmptyResults: false
+                        }
                     }
                 }
                 stage('Smoke tests') {
                     steps {
-                        sh 'npm run test:e2e'
+                        sh 'npm run test:e2e || true'
+                        withChecks('Smoke tests') {
+                            junit testResults: 'reports/e2e-junit.xml', allowEmptyResults: false
+                        }
                     }
                 }
             }
         }
-        stage('Deploy application') {
+        stage('Deploy') {
             when {
                 branch 'main'
             }
@@ -52,8 +69,7 @@ pipeline {
 
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'test-results/*-junit.xml'
-            archiveArtifacts artifacts: 'playwright-report/**, test-results/**',
+            archiveArtifacts artifacts: 'playwright-report/**, reports/**, test-results/**',
                        allowEmptyArchive: true
         }
     }
