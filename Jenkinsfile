@@ -18,16 +18,22 @@ pipeline {
     stages {
         stage('Install') {
             steps {
-                withChecks('Install') {
-                    sh 'npm ci'
-                }
+                sh 'npm ci'
+            }
+            // publishChecks in post always closes the check (green or red),
+            // unlike withChecks around a plain sh which leaves it "in progress".
+            post {
+                success      { publishChecks name: 'Install', conclusion: 'SUCCESS', summary: 'npm ci' }
+                unsuccessful { publishChecks name: 'Install', conclusion: 'FAILURE', summary: 'npm ci failed' }
             }
         }
         stage('Build') {
             steps {
-                withChecks('Build') {
-                    sh 'npm run build'
-                }
+                sh 'npm run build'
+            }
+            post {
+                success      { publishChecks name: 'Build', conclusion: 'SUCCESS', summary: 'vite build' }
+                unsuccessful { publishChecks name: 'Build', conclusion: 'FAILURE', summary: 'vite build failed' }
             }
         }
         stage('Test') {
@@ -35,6 +41,7 @@ pipeline {
                 stage('Unit tests') {
                     steps {
                         sh 'npx vitest run || true'
+                        // junit inside withChecks closes this check with test results.
                         withChecks('Unit tests') {
                             junit testResults: 'reports/unit-junit.xml', allowEmptyResults: false
                         }
