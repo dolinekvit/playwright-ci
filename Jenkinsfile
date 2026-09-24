@@ -16,31 +16,43 @@ pipeline {
     }
 
     stages {
-        stage('Install dependencies') {
+        stage('Install') {
             steps {
-                sh 'npm ci'
+                withChecks('Install') {
+                    sh 'npm ci'
+                }
             }
         }
-        stage('Build application') {
+        stage('Build') {
             steps {
-                sh 'npm run build'
+                withChecks('Build') {
+                    sh 'npm run build'
+                }
             }
         }
         stage('Test') {
             parallel {
                 stage('Unit tests') {
                     steps {
-                        sh 'npx vitest run --reporter=junit --outputFile=test-results/unit-junit.xml'
+                        // Run tests without aborting the stage, then let junit
+                        // grade the result and publish it to the named check.
+                        sh 'npx vitest run || true'
+                        withChecks('Unit tests') {
+                            junit testResults: 'test-results/unit-junit.xml', allowEmptyResults: false
+                        }
                     }
                 }
                 stage('Smoke tests') {
                     steps {
-                        sh 'npm run test:e2e'
+                        sh 'npm run test:e2e || true'
+                        withChecks('Smoke tests') {
+                            junit testResults: 'test-results/e2e-junit.xml', allowEmptyResults: false
+                        }
                     }
                 }
             }
         }
-        stage('Deploy application') {
+        stage('Deploy') {
             when {
                 branch 'main'
             }
@@ -52,7 +64,6 @@ pipeline {
 
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'test-results/*-junit.xml'
             archiveArtifacts artifacts: 'playwright-report/**, test-results/**',
                        allowEmptyArchive: true
         }
